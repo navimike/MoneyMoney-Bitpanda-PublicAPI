@@ -1,0 +1,9 @@
+# private API responses (contain balances and wallet ids)
+API Abrufe/
+bp_samples/
+bp_*.json
+*.ndjson
+moneymoney-protokoll*.txt
+
+# macOS
+.DS_Store

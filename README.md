@@ -4,7 +4,7 @@ Inoffizielle MoneyMoney-Extension für Bitpanda auf Basis der neuen
 [Bitpanda Public API](https://docs.public.bitpanda.com) (`api.public.bitpanda.com/v1`).
 Nachfolger der Legacy-API-Extension von
 [GimliGloinsSon](https://github.com/GimliGloinsSon/MoneyMoney-bitpanda-Extension).
-Status: unsigniert, Version 2.03.
+Status: unsigniert, aktuelle Version 2.04 (siehe `version` im Skriptkopf).
 
 ## Installation
 
@@ -28,6 +28,15 @@ Pro Fiat-Wallet ein Konto (z. B. *Bitpanda EUR*) mit Umsätzen, dazu Depots. Sta
 
 - `bitpanda-api-testharness.lua`: stubbt die MoneyMoney-Laufzeit und prüft ~30 Szenarien (Pagination, Fehlerformate, Vorzeichen, fehlende Felder, Duplikate). Aufruf: `TZ=Europe/Berlin lua5.3 bitpanda-api-testharness.lua` (auch `texlua` aus TeX Live funktioniert).
 - `bitpanda-api-replay.lua`: fährt die Extension gegen gespeicherte echte API-Antworten und gleicht Umsatzsumme und Saldo mit `asset_balance_after` ab. Die Antworten holt `fetch-samples.sh` (eigener API-Key nötig); sie enthalten Kontostände und gehören nicht ins Repository.
+
+## Fehlersuche
+
+Bei langen Historien steht jede geladene Seite der Umsätze im MoneyMoney-Protokoll (Fenster → Protokoll): `operations: Seite n, m Einträge, Cursor <Zeitstempel>`. Bei einer Fehlermeldung bitte diese Zeilen zusammen mit der Meldung melden.
+
+## Änderungen
+
+- 2.04 – Paginierung: Zyklenerkennung über die Cursor statt über Operations-IDs (behebt den Abbruch „Paginierung beginnt von vorn“ bei langen Historien), jede Seite wird protokolliert.
+- 2.03 – Review-Fassung: Transaktions-ID im Verwendungszweck, strikte Feldsemantik für Depotpositionen, deutsche Meldungen, `SPLIT_DEPOTS`.
 
 ## Lizenz
 

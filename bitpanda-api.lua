@@ -47,7 +47,7 @@ local SPLIT_DEPOTS  = true           -- true: one depot per asset group (GROUPS)
 local MARKET        = "Bitpanda"
 
 WebBanking{
-  version     = 2.03,
+  version     = 2.04,
   url         = "https://web.bitpanda.com/",
   services    = {SERVICE_NAME},
   description = "Bitpanda: Fiat-Wallets, Krypto, Aktien, ETFs, ETCs, Metalle, Indizes und Cash Plus über die Bitpanda Public API"
@@ -276,14 +276,51 @@ local function apiGet(path, params)
   return json, err, info
 end
 
+-- Cursors of the Bitpanda API are base64-encoded credited_at timestamps. Decoded for
+-- log and error messages only; anything that does not decode to a timestamp is
+-- returned unchanged.
+local B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local B64_VALUE = {}
+for i = 1, #B64 do B64_VALUE[string.sub(B64, i, i)] = i - 1 end
+
+local function cursorText(cursor)
+  if cursor == nil or cursor == "" then return "(Anfang)" end
+  local clean = string.gsub(tostring(cursor), "=", "")
+  local bytes = {}
+  for i = 1, #clean, 4 do
+    local n, chars = 0, 0
+    for j = 0, 3 do
+      local ch = string.sub(clean, i + j, i + j)
+      if ch == "" then
+        n = n * 64
+      else
+        local v = B64_VALUE[ch]
+        if v == nil then return cursor end
+        n = n * 64 + v
+        chars = chars + 1
+      end
+    end
+    table.insert(bytes, string.char(math.floor(n / 65536) % 256))
+    if chars >= 3 then table.insert(bytes, string.char(math.floor(n / 256) % 256)) end
+    if chars >= 4 then table.insert(bytes, string.char(n % 256)) end
+  end
+  local decoded = table.concat(bytes)
+  if string.match(decoded, "^%d%d%d%d%-%d%d%-%d%dT[%d:%.]+Z?$") then return decoded end
+  return cursor
+end
+
 -- All items of a cursor-paginated endpoint. Returns (items, nil, nil) or (nil, errorText,
--- errorInfo); never partial data. The API has two quirks (observed Sept 2026): the last
--- page still carries a next_cursor although has_next_page is false, and an unknown
--- cursor silently returns page 1 again. The docs show the pagination fields in camelCase
--- while the API sends snake_case, so both spellings are accepted here.
+-- errorInfo); never partial data. Observed API behaviour (Sept 2026): the cursor is the
+-- credited_at of the last item, the last page still carries a next_cursor although
+-- has_next_page is false, and an unknown cursor silently returns page 1 again. A cycle
+-- is therefore detected on the cursors themselves: a next_cursor that was already used
+-- to fetch a page means the API restarted or is stuck, and the refresh is aborted with
+-- the page numbers in the message. Every page after the first is logged so that the
+-- MoneyMoney protocol shows where a long history breaks. The docs show the pagination
+-- fields in camelCase while the API sends snake_case, so both spellings are accepted.
 local function apiGetAll(path, params)
   local result = {}
-  local seenIds = {}
+  local usedCursors = {}   -- cursor -> number of the page it fetched
   local cursor = nil
   local pages = 0
   repeat
@@ -299,17 +336,13 @@ local function apiGetAll(path, params)
     if type(data) ~= "table" then
       return nil, "Unerwarteter Datentyp in der Antwort von " .. path, {transient = false}
     end
-    local newItems = 0
-    for _, item in ipairs(data) do
-      local id = type(item) == "table" and (item.operation_id or item.id or item.transaction_id) or nil
-      if id == nil or not seenIds[id] then
-        if id ~= nil then seenIds[id] = true end
-        table.insert(result, item)
-        newItems = newItems + 1
-      end
+    pages = pages + 1
+    usedCursors[cursor or ""] = pages
+    if pages > 1 then
+      MM.printStatus(string.format("%s: Seite %d, %d Einträge, Cursor %s", path, pages, #data, cursorText(cursor)))
     end
-    if #data > 0 and newItems == 0 then
-      return nil, "Paginierung von " .. path .. " beginnt von vorn (Cursor abgelehnt?)", {transient = false}
+    for _, item in ipairs(data) do
+      table.insert(result, item)
     end
 
     local hasNext = json.has_next_page
@@ -323,14 +356,16 @@ local function apiGetAll(path, params)
       if nextCur == nil or nextCur == "" then
         return nil, "Folgeseite ohne Cursor angekündigt von " .. path, {transient = false}
       end
-      if nextCur == cursor then
-        return nil, "Cursor von " .. path .. " bewegt sich nicht", {transient = false}
+      if usedCursors[nextCur] ~= nil then
+        return nil, string.format(
+          "Paginierung von %s wiederholt sich: Seite %d (%d Einträge) verweist mit Cursor %s auf Seite %d. " ..
+          "Bitte das Protokoll an den Autor der Extension schicken.",
+          path, pages, #data, cursorText(nextCur), usedCursors[nextCur]), {transient = false}
       end
       cursor = nextCur
     else
       cursor = nil
     end
-    pages = pages + 1
     if cursor ~= nil and pages >= MAX_PAGES then
       return nil, "Zu viele Seiten von " .. path .. " (mehr als " .. MAX_PAGES .. ")", {transient = false}
     end

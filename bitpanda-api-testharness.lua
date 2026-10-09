@@ -113,6 +113,11 @@ local function fakeApi(url)
         while #resp.data < 100 do table.insert(resp.data, op("pad" .. #resp.data, "deposit", { fiat("deposit", "INCOMING", "1.00", "2026-06-01T00:00:00.000Z") })) end
       end
     else
+      if SCENARIO.stuckCursor then
+        -- emulate >100 operations with the same credited_at: the API hands back the same cursor
+        return { data = { op("op9", "deposit", { fiat("deposit", "INCOMING", "1.00", "2026-05-01T00:00:00.000Z") }) },
+                 has_next_page = true, next_cursor = "c2==" }
+      end
       if SCENARIO.cursorRestarts then
         -- emulate the real API: an unknown cursor yields page 1 again
         SCENARIO.cursorRestarts = false
@@ -120,7 +125,13 @@ local function fakeApi(url)
         table.insert(REQUESTS, "(restart)")
         return again
       end
-      resp = { data = { op("op5", "deposit", { fiat("deposit", "INCOMING", "999.00", "2026-07-01T12:00:00.000Z") }) },
+      local page2 = { op("op5", "deposit", { fiat("deposit", "INCOMING", "999.00", "2026-07-01T12:00:00.000Z") }) }
+      if SCENARIO.duplicateIds then
+        -- legacy-style data: distinct operations sharing operation_id values of page 1
+        table.insert(page2, op("op1", "deposit", { fiat("deposit", "INCOMING", "11.00", "2026-04-01T00:00:00.000Z", { transaction_id = "tx-dup-a" }) }))
+        table.insert(page2, op("op2", "deposit", { fiat("deposit", "INCOMING", "12.00", "2026-04-01T00:00:00.000Z", { transaction_id = "tx-dup-b" }) }))
+      end
+      resp = { data = page2,
                has_next_page = false, next_cursor = SCENARIO.staleCursorOnLastPage and "MjAyNi0wMS0yN1Qw" or nil }
     end
   else
@@ -447,4 +458,23 @@ run("T29 key in user name, dummy password: one rejected request in session 1, no
   local s2 = InitializeSession("WebBanking", "Bitpanda (Public API)", key, nil, "dummy"); local n2 = 0
   for _, r in ipairs(REQUESTS) do if r:find("^401") then n2 = n2 + 1 end end
   return string.format("session1=%s (%d rejected), session2=%s (%d rejected), apiKeyField=%s", tostring(s1), n1, tostring(s2), n2, tostring(LocalStorage.apiKeyField))
+end)
+
+Connection = function() return { request = function(self, m, url, b, c, headers) return fakeApi(url) end } end
+dofile(EXT)
+run("T30 distinct operations sharing operation_id values (legacy data) must all be delivered", { duplicateIds = true }, function()
+  session()
+  local r = RefreshAccount(findAccount(ListAccounts({}), "fiat"), 0)
+  if type(r) ~= "table" then return "-> " .. tostring(r) end
+  local found = 0
+  for _, t in ipairs(r.transactions) do if t.amount == 11 or t.amount == 12 then found = found + 1 end end
+  return "tx=" .. #r.transactions .. ", legacy duplicates-by-id delivered=" .. found .. " (expected 2)"
+end)
+
+run("T31 API stuck: page 2 returns its own cursor again", { stuckCursor = true }, function()
+  session()
+  local r = RefreshAccount(findAccount(ListAccounts({}), "fiat"), 0)
+  local n = 0
+  for _, u in ipairs(REQUESTS) do if u:find("operations") then n = n + 1 end end
+  return (type(r) == "table" and ("tx=" .. #r.transactions) or ("-> " .. tostring(r))) .. " | operations requests=" .. n .. " | status: " .. table.concat(STATUS, " / ")
 end)

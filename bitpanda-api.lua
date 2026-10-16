@@ -44,10 +44,11 @@ local MAX_PAGES     = 500            -- hard stop for cursor pagination
 local MAX_ATTEMPTS  = 3              -- attempts per request on transient failures
 local SINCE_OVERLAP = 7 * 86400      -- re-request this much history before `since`; duplicates are dropped by MoneyMoney
 local SPLIT_DEPOTS  = true           -- true: one depot per asset group (GROUPS), false: a single depot for all assets
+local INDEX_AS_NOMINAL = true        -- true: Bitpanda indices as nominal positions (invested amount at a percent quote)
 local MARKET        = "Bitpanda"
 
 WebBanking{
-  version     = 2.04,
+  version     = 2.05,
   url         = "https://web.bitpanda.com/",
   services    = {SERVICE_NAME},
   description = "Bitpanda: Fiat-Wallets, Krypto, Aktien, ETFs, ETCs, Metalle, Indizes und Cash Plus über die Bitpanda Public API"
@@ -310,9 +311,10 @@ local function cursorText(cursor)
 end
 
 -- All items of a cursor-paginated endpoint. Returns (items, nil, nil) or (nil, errorText,
--- errorInfo); never partial data. Observed API behaviour (Sept 2026): the cursor is the
--- credited_at of the last item, the last page still carries a next_cursor although
--- has_next_page is false, and an unknown cursor silently returns page 1 again. A cycle
+-- errorInfo); never partial data. Observed API behaviour (Sept/Oct 2026): the cursor is
+-- the base64-encoded credited_at of the last item, the last page still carries a
+-- next_cursor although has_next_page is false, an unknown or padded cursor silently
+-- returns page 1 again. A cycle
 -- is therefore detected on the cursors themselves: a next_cursor that was already used
 -- to fetch a page means the API restarted or is stuck, and the refresh is aborted with
 -- the page numbers in the message. Every page after the first is logged so that the
@@ -327,7 +329,10 @@ local function apiGetAll(path, params)
     local p = {}
     for k, v in pairs(params or {}) do p[k] = v end
     p.page_size = PAGE_SIZE
-    if cursor ~= nil then p.cursor = cursor end
+    -- The API emits base64 cursors with "=" padding for timestamps without milliseconds
+    -- but does not accept padded cursors itself (it answers with page 1 again, verified
+    -- Oct 2026); unpadded cursors are accepted, so the padding is stripped.
+    if cursor ~= nil then p.cursor = (string.gsub(cursor, "=+$", "")) end
 
     local json, err, info = apiGet(path, p)
     if json == nil then return nil, err, info end
@@ -601,6 +606,28 @@ local function securityForPosition(pos, accountCurrency)
     valueCur = currencySymbol(cb.currency_id)
     if valueCur == nil then
       return nil, "Unbekannte Währungs-ID " .. tostring(cb.currency_id) .. " in der Bewertung von " .. assetName(assetId)
+    end
+  end
+
+  -- Bitpanda indices: the API's balance is an index unit count that drifts between
+  -- refreshes without any transaction (rebalancing), so a unit count is misleading.
+  -- Shown as a nominal position instead: quantity = invested amount, quote in percent
+  -- of it (100 = break-even) – the presentation the legacy extension used. Falls back
+  -- to units when the invested amount is missing or not in the account currency.
+  if INDEX_AS_NOMINAL and classifyAsset(asset) == "index" and amount ~= nil and valueCur == accountCurrency then
+    local invested = moneyValue(pos.invested_amount)
+    local investedCur = type(pos.invested_amount) == "table" and currencySymbol(pos.invested_amount.currency_id) or nil
+    if invested ~= nil and invested > 0 and investedCur == accountCurrency then
+      return {
+        name               = assetName(assetId),
+        market             = MARKET,
+        quantity           = invested,
+        currencyOfQuantity = investedCur,
+        amount             = amount,
+        price              = amount / invested * 100,
+        purchasePrice      = 100,
+        tradeTimestamp     = os.time(),
+      }, nil
     end
   end
 

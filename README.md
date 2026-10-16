@@ -4,7 +4,7 @@ Inoffizielle MoneyMoney-Extension für Bitpanda auf Basis der neuen
 [Bitpanda Public API](https://docs.public.bitpanda.com) (`api.public.bitpanda.com/v1`).
 Nachfolger der Legacy-API-Extension von
 [GimliGloinsSon](https://github.com/GimliGloinsSon/MoneyMoney-bitpanda-Extension).
-Status: unsigniert, aktuelle Version 2.04 (siehe `version` im Skriptkopf).
+Status: unsigniert, aktuelle Version 2.05 (siehe `version` im Skriptkopf).
 
 ## Installation
 
@@ -23,6 +23,8 @@ Pro Fiat-Wallet ein Konto (z. B. *Bitpanda EUR*) mit Umsätzen, dazu Depots. Sta
 - Jeder Umsatz trägt die Bitpanda-Transaktions-ID im Verwendungszweck, damit MoneyMoney gleich aussehende Buchungen (gleicher Tag, Betrag und Text) nicht als Duplikate verwirft.
 - Umsätze werden ab `since` minus 7 Tage abgefragt; Duplikate verwirft MoneyMoney.
 - Ein plötzlich leeres Portfolio wird zweimal abgewiesen, bevor es übernommen wird (Schutz vor API-Aussetzern).
+- Bitpanda-Indizes (BCI) werden nominal geführt: investierter Betrag als Nominal, aktueller Kurs in Prozent davon (100 % = Einstand). Der Anteilsbestand der API driftet ohne Transaktionen und taugt nicht als Stückzahl. Abschaltbar über `INDEX_AS_NOMINAL = false`.
+- Die Paginierung der Umsätze folgt MoneyMoneys `since`; beim Einrichten fordert MoneyMoney ein Jahr an.
 
 ## Tests
 
@@ -34,6 +36,8 @@ Pro Fiat-Wallet ein Konto (z. B. *Bitpanda EUR*) mit Umsätzen, dazu Depots. Sta
 Bei langen Historien steht jede geladene Seite der Umsätze im MoneyMoney-Protokoll (Fenster → Protokoll): `operations: Seite n, m Einträge, Cursor <Zeitstempel>`. Bei einer Fehlermeldung bitte diese Zeilen zusammen mit der Meldung melden.
 
 ## Änderungen
+
+- 2.05 – Paginierung: Cursor werden ohne base64-Padding gesendet (die API gibt für Zeitstempel ohne Millisekunden gepolsterte Cursor aus, akzeptiert sie aber nur ohne Padding – sonst Seite 1). Indizes als Nominalposition.
 
 - 2.04 – Paginierung: Zyklenerkennung über die Cursor statt über Operations-IDs (behebt den Abbruch „Paginierung beginnt von vorn“ bei langen Historien), jede Seite wird protokolliert.
 - 2.03 – Review-Fassung: Transaktions-ID im Verwendungszweck, strikte Feldsemantik für Depotpositionen, deutsche Meldungen, `SPLIT_DEPOTS`.

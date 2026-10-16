@@ -60,6 +60,9 @@ local function fakeApi(url)
     }
     if SCENARIO.withUsd then table.insert(d, { currency_id = IDS.usd, balance = { value = "10", currency_id = IDS.usd } }) end
     if SCENARIO.unvalued then table.insert(d, { asset_id = "gold-uuid", balance = { value = "1.5" } }) end
+    if SCENARIO.withIndex then table.insert(d, { asset_id = IDS.bci, balance = { value = "0.026354981" },
+      invested_amount = { value = "609.66", currency_id = IDS.eur }, average_buy_price = { value = "23133.20683802", currency_id = IDS.eur },
+      currency_balance = { value = "774.71", currency_id = IDS.eur }, total_return = { value = "165.05", currency_id = IDS.eur } }) end
     resp = { data = d }
   elseif path == "currencies" then
     if SCENARIO.currenciesEmpty then return { data = {} } end
@@ -82,6 +85,14 @@ local function fakeApi(url)
     else resp = { data = { price = "2500", currency_id = IDS.eur } } end
   elseif path == "operations" then
     local cursor = query:match("cursor=([^&]*)")
+    if SCENARIO.paddedCursor and cursor ~= nil then
+      if cursor:find("=", 1, true) or cursor:find("%3D", 1, true) or cursor:find("%3d", 1, true) then
+        cursor = nil                    -- real API: padded cursor is not understood -> page 1 again
+        table.insert(REQUESTS, "(padded cursor rejected -> page 1)")
+      elseif cursor == "MjAyNi0wNS0yNVQxNDozNTozOVo" then
+        cursor = "c2=="                 -- unpadded form accepted -> page 2
+      end
+    end
     local function op(id, opType, txs) return { operation_id = id, operation_type = opType, transactions = txs } end
     local function fiat(txType, flow, amount, credited, extra)
       local t = { transaction_type = txType, flow = flow, currency_id = IDS.eur, transaction_id = "tx-" .. tostring(amount) .. "-" .. tostring(credited),
@@ -107,7 +118,7 @@ local function fakeApi(url)
           { transaction_type = "buy", flow = "INCOMING", asset_id = IDS.btc, index_asset_id = IDS.bci,
             asset_amount = { value = "0.0001", asset_id = IDS.btc }, trade = { rate = "1" } },
         }),
-      }, has_next_page = true, next_cursor = "c2==" }
+      }, has_next_page = true, next_cursor = SCENARIO.paddedCursor and "MjAyNi0wNS0yNVQxNDozNTozOVo=" or "c2==" }
       if SCENARIO.noPaginationFields then resp.has_next_page = nil; resp.next_cursor = nil
         -- pad to a full page so the truncation is undetectable by count
         while #resp.data < 100 do table.insert(resp.data, op("pad" .. #resp.data, "deposit", { fiat("deposit", "INCOMING", "1.00", "2026-06-01T00:00:00.000Z") })) end
@@ -477,4 +488,23 @@ run("T31 API stuck: page 2 returns its own cursor again", { stuckCursor = true }
   local n = 0
   for _, u in ipairs(REQUESTS) do if u:find("operations") then n = n + 1 end end
   return (type(r) == "table" and ("tx=" .. #r.transactions) or ("-> " .. tostring(r))) .. " | operations requests=" .. n .. " | status: " .. table.concat(STATUS, " / ")
+end)
+
+run("T32 index position (BCI5 sample): nominal presentation", { withIndex = true }, function()
+  session()
+  local r = RefreshAccount(findAccount(ListAccounts({}), "index"), 0)
+  if type(r) ~= "table" then return "-> " .. tostring(r) end
+  for _, sec in ipairs(r.securities) do
+    return string.format("%s: quantity=%s %s amount=%s price=%.2f%% purchasePrice=%s", sec.name, tostring(sec.quantity), tostring(sec.currencyOfQuantity), tostring(sec.amount), sec.price, tostring(sec.purchasePrice))
+  end
+  return "no index position"
+end)
+
+run("T33 API emits a padded cursor (timestamp without milliseconds) and rejects it when sent back padded", { paddedCursor = true }, function()
+  session()
+  local r = RefreshAccount(findAccount(ListAccounts({}), "fiat"), 0)
+  local sent = {}
+  for _, u in ipairs(REQUESTS) do local c = u:match("cursor=([^&]*)"); if c then sent[#sent + 1] = c end end
+  if type(r) ~= "table" then return "-> " .. tostring(r) .. " | cursors sent: " .. table.concat(sent, ", ") end
+  return "tx=" .. #r.transactions .. " (expected 8 incl. page 2) | cursors sent: " .. table.concat(sent, ", ")
 end)

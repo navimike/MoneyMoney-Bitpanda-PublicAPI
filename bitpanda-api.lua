@@ -10,6 +10,8 @@
 --   only when the bank access is created, so every depot group is created up front.
 -- Behaviour:   API errors, missing fields and unexpected values abort the refresh with an
 --   error message instead of delivering partial data; transient failures are retried.
+--   The first refresh of a cash account loads the complete history, later refreshes
+--   follow MoneyMoney's `since` (see FULL_HISTORY_ON_FIRST_REFRESH).
 --   Every transaction carries its Bitpanda transaction id in the purpose text so that
 --   MoneyMoney's duplicate detection can tell equal-looking bookings apart.
 --
@@ -45,10 +47,11 @@ local MAX_ATTEMPTS  = 3              -- attempts per request on transient failur
 local SINCE_OVERLAP = 7 * 86400      -- re-request this much history before `since`; duplicates are dropped by MoneyMoney
 local SPLIT_DEPOTS  = true           -- true: one depot per asset group (GROUPS), false: a single depot for all assets
 local INDEX_AS_NOMINAL = true        -- true: Bitpanda indices as nominal positions (invested amount at a percent quote)
+local FULL_HISTORY_ON_FIRST_REFRESH = true  -- true: the first refresh of a cash account ignores `since` and loads the complete history
 local MARKET        = "Bitpanda"
 
 WebBanking{
-  version     = 2.05,
+  version     = 2.06,
   url         = "https://web.bitpanda.com/",
   services    = {SERVICE_NAME},
   description = "Bitpanda: Fiat-Wallets, Krypto, Aktien, ETFs, ETCs, Metalle, Indizes und Cash Plus über die Bitpanda Public API"
@@ -880,12 +883,24 @@ function RefreshAccount(account, since)
     end
   end
 
-  local ops, err = loadOperations(since)
+  -- MoneyMoney asks for about one year when an account is created. On the very first
+  -- refresh of a cash account the complete history is loaded instead (remembered per
+  -- currency in LocalStorage); later refreshes follow `since`.
+  local historyKey = "fullHistoryDone_" .. tostring(account.currency)
+  local firstRefresh = FULL_HISTORY_ON_FIRST_REFRESH and LocalStorage[historyKey] ~= true
+  if firstRefresh then
+    MM.printStatus("Erster Abruf für " .. account.name .. ": lade die komplette Historie")
+  end
+
+  local effectiveSince = since
+  if firstRefresh then effectiveSince = nil end
+  local ops, err = loadOperations(effectiveSince)
   if ops == nil then return err end
 
   local transactions, terr = transactionsForFiat(account, ops)
   if transactions == nil then return terr end
 
+  if firstRefresh then LocalStorage[historyKey] = true end
   return {
     balance      = balance,
     transactions = transactions,

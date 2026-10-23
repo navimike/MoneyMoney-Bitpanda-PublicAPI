@@ -508,3 +508,37 @@ run("T33 API emits a padded cursor (timestamp without milliseconds) and rejects 
   if type(r) ~= "table" then return "-> " .. tostring(r) .. " | cursors sent: " .. table.concat(sent, ", ") end
   return "tx=" .. #r.transactions .. " (expected 8 incl. page 2) | cursors sent: " .. table.concat(sent, ", ")
 end)
+
+Connection = function() return { request = function(self, m, url, b, c, headers) return fakeApi(url) end } end
+dofile(EXT)
+run("T34 first refresh loads the full history (no from), second refresh follows since", {}, function()
+  LocalStorage = {}
+  session()
+  local eur = findAccount(ListAccounts({}), "fiat")
+  local r1 = RefreshAccount(eur, 1735689600)
+  local urls1 = {}
+  for _, u in ipairs(REQUESTS) do if u:find("operations") then urls1[#urls1 + 1] = u:gsub(".*operations%??", "") end end
+  REQUESTS = {}
+  dofile(EXT)  -- new session, same LocalStorage
+  session()
+  local r2 = RefreshAccount(eur, 1735689600)
+  local urls2 = {}
+  for _, u in ipairs(REQUESTS) do if u:find("operations") then urls2[#urls2 + 1] = u:gsub(".*operations%??", "") end end
+  return string.format("run1: tx=%s, operations queries: %s | run2: tx=%s, queries: %s | marker=%s",
+    type(r1) == "table" and #r1.transactions or tostring(r1), table.concat(urls1, " ; "),
+    type(r2) == "table" and #r2.transactions or tostring(r2), table.concat(urls2, " ; "), tostring(LocalStorage.fullHistoryDone_EUR))
+end)
+
+run("T35 first refresh fails (API error): marker must NOT be set", { assetsFail = false }, function()
+  LocalStorage = {}
+  local orig = Connection
+  Connection = function() return { request = function(self, m, url, b, c, headers)
+    if url:find("operations") then return { errors = { { status = 500, code = "internal", title = "boom" } } } end
+    return fakeApi(url)
+  end } end
+  dofile(EXT)
+  session()
+  local r = RefreshAccount(findAccount(ListAccounts({}), "fiat"), 1735689600)
+  Connection = orig
+  return "refresh -> " .. tostring(r):sub(1, 60) .. " | marker=" .. tostring(LocalStorage.fullHistoryDone_EUR)
+end)

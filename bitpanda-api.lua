@@ -46,12 +46,12 @@ local MAX_PAGES     = 500            -- hard stop for cursor pagination
 local MAX_ATTEMPTS  = 3              -- attempts per request on transient failures
 local SINCE_OVERLAP = 7 * 86400      -- re-request this much history before `since`; duplicates are dropped by MoneyMoney
 local SPLIT_DEPOTS  = true           -- true: one depot per asset group (GROUPS), false: a single depot for all assets
-local INDEX_AS_NOMINAL = true        -- true: Bitpanda indices as nominal positions (invested amount at a percent quote)
+local INDEX_AS_NOMINAL = true        -- true: Bitpanda indices as nominal positions (net invested capital at a percent quote)
 local FULL_HISTORY_ON_FIRST_REFRESH = true  -- true: the first refresh of a cash account ignores `since` and loads the complete history
 local MARKET        = "Bitpanda"
 
 WebBanking{
-  version     = 2.06,
+  version     = 2.07,
   url         = "https://web.bitpanda.com/",
   services    = {SERVICE_NAME},
   description = "Bitpanda: Fiat-Wallets, Krypto, Aktien, ETFs, ETCs, Metalle, Indizes und Cash Plus über die Bitpanda Public API"
@@ -168,6 +168,11 @@ local function assetSymbol(id)
   local a = assetById[id]
   if a ~= nil then return a.symbol end
   return nil
+end
+
+-- index_buy, index_sell, index_rebalancing: operations of a Bitpanda index (BCI)
+local function isIndexOperation(opType)
+  return string.sub(tostring(opType or ""), 1, 6) == "index_"
 end
 
 -------------------------------------------------------------------------------
@@ -595,6 +600,98 @@ function ListAccounts(knownAccounts)
 end
 
 -------------------------------------------------------------------------------
+-- Net invested capital of Bitpanda indices
+-------------------------------------------------------------------------------
+-- The portfolio's invested_amount of an index is the cost basis of its *current*
+-- constituents, which the monthly rebalancing rewrites (realised gains become new cost).
+-- The capital the user actually paid is the sum of the fiat legs of index_buy and
+-- index_sell operations (buys positive, sells negative); rebalancing is capital
+-- neutral and skipped. The API cannot filter operations by index, so the operations
+-- are scanned once completely and afterwards only from the last considered credit
+-- timestamp on; results and that timestamp live in LocalStorage.
+local indexNets = nil   -- {[indexAssetId] = net invested in `indexNetCurrency`} for this session
+
+local function updateIndexNets(currencySym)
+  local currencyId = currencyBySym[currencySym]
+  if currencyId == nil then return "Währung " .. tostring(currencySym) .. " ist bei Bitpanda unbekannt" end
+  if LocalStorage.indexNetCurrency ~= nil and LocalStorage.indexNetCurrency ~= currencySym then
+    return "Index-Einsatz wurde bisher in " .. tostring(LocalStorage.indexNetCurrency) .. " ermittelt, Depot läuft in " .. currencySym
+  end
+
+  local untilIso = LocalStorage.indexNetUntil
+  local untilTs = parseIso8601(untilIso)
+  local params = {}
+  if untilIso ~= nil and untilTs ~= nil then
+    params["from"] = untilIso
+    MM.printStatus("Lade Index-Operationen seit " .. untilIso)
+  else
+    untilTs = nil
+    MM.printStatus("Ermittle Index-Einsatz aus der gesamten Historie")
+  end
+  local ops, err = apiGetAll("operations", params)
+  if ops == nil then return err end
+
+  local nets = {}
+  for key, value in pairs(LocalStorage) do
+    if type(key) == "string" and string.sub(key, 1, 9) == "indexNet_" and tonumber(value) ~= nil then
+      nets[string.sub(key, 10)] = tonumber(value)
+    end
+  end
+
+  local maxTs, maxIso = untilTs, untilIso
+  for _, op in ipairs(ops) do
+    local opType = tostring(op.operation_type or "")
+    local opId   = tostring(op.operation_id or "?")
+    if isIndexOperation(opType) and opType ~= "index_rebalancing" then
+      for _, tx in ipairs(op.transactions or {}) do
+        local idx = tx.index_asset_id
+        local ts = parseIso8601(tx.credited_at)
+        if idx ~= nil and tx.asset_id == nil and tx.currency_id ~= nil and ts ~= nil
+           and (untilTs == nil or ts > untilTs) then
+          if tx.currency_id ~= currencyId then
+            MM.printStatus("Index-Operation " .. opId .. " in fremder Währung übersprungen")
+          else
+            local value = moneyValue(tx.asset_amount)
+            if value == nil then return "Betrag fehlt in Index-Operation " .. opId end
+            local flow = string.upper(tostring(tx.flow or ""))
+            if flow == "OUTGOING" then
+              nets[idx] = (nets[idx] or 0) + math.abs(value)
+            elseif flow == "INCOMING" then
+              nets[idx] = (nets[idx] or 0) - math.abs(value)
+            else
+              return "Unbekannte Flussrichtung '" .. tostring(tx.flow) .. "' in Index-Operation " .. opId
+            end
+          end
+        end
+        if ts ~= nil and (maxTs == nil or ts > maxTs) then maxTs, maxIso = ts, tx.credited_at end
+      end
+    else
+      -- the scan boundary advances over every operation, index or not
+      for _, tx in ipairs(op.transactions or {}) do
+        local ts = parseIso8601(tx.credited_at)
+        if ts ~= nil and (maxTs == nil or ts > maxTs) then maxTs, maxIso = ts, tx.credited_at end
+      end
+    end
+  end
+
+  for idx, net in pairs(nets) do LocalStorage["indexNet_" .. idx] = net end
+  if maxIso ~= nil then LocalStorage.indexNetUntil = maxIso end
+  LocalStorage.indexNetCurrency = currencySym
+  indexNets = nets
+  return nil
+end
+
+-- Net invested capital of one index, nil if no index operation was ever seen for it.
+-- Returns (number|nil, nil) or (nil, errorText).
+local function indexNetInvested(indexAssetId, currencySym)
+  if indexNets == nil then
+    local err = updateIndexNets(currencySym)
+    if err ~= nil then return nil, err end
+  end
+  return indexNets[indexAssetId], nil
+end
+
+-------------------------------------------------------------------------------
 -- Depot positions
 -------------------------------------------------------------------------------
 -- Returns (security, nil) or (nil, errorText).
@@ -618,16 +715,29 @@ local function securityForPosition(pos, accountCurrency)
   -- of it (100 = break-even) – the presentation the legacy extension used. Falls back
   -- to units when the invested amount is missing or not in the account currency.
   if INDEX_AS_NOMINAL and classifyAsset(asset) == "index" and amount ~= nil and valueCur == accountCurrency then
-    local invested = moneyValue(pos.invested_amount)
-    local investedCur = type(pos.invested_amount) == "table" and currencySymbol(pos.invested_amount.currency_id) or nil
-    if invested ~= nil and invested > 0 and investedCur == accountCurrency then
+    -- Nominal: the net capital paid for the index (see updateIndexNets). If no index
+    -- operation is known, or the net is not positive (partial sales above cost),
+    -- Bitpanda's invested_amount – the cost basis of the current constituents – is used.
+    local nominal, err = indexNetInvested(assetId, accountCurrency)
+    if err ~= nil then return nil, err end
+    if nominal == nil or nominal <= 0 then
+      local invested = moneyValue(pos.invested_amount)
+      local investedCur = type(pos.invested_amount) == "table" and currencySymbol(pos.invested_amount.currency_id) or nil
+      if invested ~= nil and invested > 0 and investedCur == accountCurrency then
+        MM.printStatus(assetName(assetId) .. ": kein Netto-Einsatz aus Operationen bekannt, nutze invested_amount von Bitpanda")
+        nominal = invested
+      else
+        nominal = nil
+      end
+    end
+    if nominal ~= nil then
       return {
         name               = assetName(assetId),
         market             = MARKET,
-        quantity           = invested,
-        currencyOfQuantity = investedCur,
+        quantity           = nominal,
+        currencyOfQuantity = accountCurrency,
         amount             = amount,
-        price              = amount / invested * 100,
+        price              = amount / nominal * 100,
         purchasePrice      = 100,
         tradeTimestamp     = os.time(),
       }, nil
@@ -714,6 +824,9 @@ local BOOKING_TEXT = {
   dividend   = "Dividende",
   reward     = "Reward",
   interest   = "Zinsen",
+  index_buy  = "Kauf",
+  index_sell = "Verkauf",
+  index_rebalancing = "Rebalancing",
 }
 local ASSET_RELATED = {buy = true, sell = true, fee = true, tax = true, dividend = true, reward = true, interest = true}
 
@@ -734,18 +847,22 @@ local function operationAssetId(op)
   return first
 end
 
--- The asset leg belonging to a trade: the leg of the operation's asset, else the first
--- asset leg that carries trade information.
-local function tradeAssetLeg(op, assetId)
-  local first = nil
+-- The asset leg belonging to a fiat leg's trade: the leg with the same trade_id (index
+-- operations contain one trade per constituent), else the leg of the operation's asset,
+-- else the first asset leg that carries trade information.
+local function tradeAssetLeg(op, fiatLeg, assetId)
+  local tradeId = type(fiatLeg.trade) == "table" and fiatLeg.trade.trade_id or nil
+  local byAsset, first = nil, nil
   for _, tx in ipairs(op.transactions or {}) do
     if tx.asset_id ~= nil and tx.trade ~= nil then
-      if tx.asset_id == assetId then return tx end
+      if tradeId ~= nil and tx.trade.trade_id == tradeId then return tx end
+      if tx.asset_id == assetId and byAsset == nil then byAsset = tx end
       if first == nil then first = tx end
     end
   end
-  return first
+  return byAsset or first
 end
+
 
 -- Fiat legs of all operations for one cash account. A stock exchange order consists of
 -- a *_reserve operation (wallet -> exchange wallet) and the executing operation with a
@@ -764,6 +881,12 @@ local function transactionsForFiat(account, ops)
   for _, op in ipairs(ops) do
     local id = operationAssetId(op)
     if id ~= nil then table.insert(ids, id) end
+    if isIndexOperation(tostring(op.operation_type or "")) then
+      -- constituents of an index operation are named in the purpose text
+      for _, tx in ipairs(op.transactions or {}) do
+        if tx.asset_id ~= nil then table.insert(ids, tx.asset_id) end
+      end
+    end
   end
   local err = loadAssets(ids)
   if err ~= nil then return nil, err end
@@ -796,7 +919,14 @@ local function transactionsForFiat(account, ops)
 
           local text = bookingTextFor(opType, txType)
           local name = text
-          if assetId ~= nil and ASSET_RELATED[txType] then
+          if isIndexOperation(opType) and assetId ~= nil then
+            -- index_buy / index_sell legs carry no transaction_type; rebalancing legs do
+            if opType == "index_rebalancing" then
+              name = "Index-Rebalancing: " .. assetName(assetId)
+            else
+              name = "Index-" .. text .. ": " .. assetName(assetId)
+            end
+          elseif assetId ~= nil and ASSET_RELATED[txType] then
             name = text .. ": " .. assetName(assetId)
           elseif opType == "savings_plan" then
             name = "Bitpanda Sparplan"
@@ -806,12 +936,12 @@ local function transactionsForFiat(account, ops)
 
           local purposeLines = {}
           if tx.trade ~= nil then
-            local leg = tradeAssetLeg(op, assetId)
+            local leg = tradeAssetLeg(op, tx, assetId)
             local legAmount = leg and moneyValue(leg.asset_amount) or nil
             local rate = tx.trade.rate
             if type(rate) == "table" then rate = rate.value end
             if legAmount ~= nil and rate ~= nil then
-              table.insert(purposeLines, string.format("%s %s @ %s %s", tostring(legAmount), assetSymbol(assetId) or "", tostring(rate), sym))
+              table.insert(purposeLines, string.format("%s %s @ %s %s", tostring(legAmount), assetSymbol(leg.asset_id) or "", tostring(rate), sym))
             end
           end
           -- The transaction id keeps equal-looking bookings (same day, amount and text)

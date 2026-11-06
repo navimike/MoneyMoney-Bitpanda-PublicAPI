@@ -43,6 +43,49 @@ local function camel(t)
   return out
 end
 
+local function indexOps()
+  return {
+    { operation_id = "0c3572f1-op", operation_type = "index_buy", transactions = {
+      { transaction_id = "0c3572f1", currency_id = IDS.eur, asset_amount = { value = "45.99", currency_id = IDS.eur }, flow = "OUTGOING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "eda60f33", rate = "17.58083576" } },
+      { transaction_id = "be0bd0ab", currency_id = IDS.eur, asset_amount = { value = "50.13", currency_id = IDS.eur }, flow = "OUTGOING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "c20d0555", rate = "409.74180000" } },
+      { transaction_id = "8a3ce66c", currency_id = IDS.eur, asset_amount = { value = "53.03", currency_id = IDS.eur }, flow = "OUTGOING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "4057474c", rate = "122.19921103" } },
+      { transaction_id = "b196c0af", currency_id = IDS.eur, asset_amount = { value = "247.34", currency_id = IDS.eur }, flow = "OUTGOING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "b20eb71a", rate = "1102.93270425" } },
+      { transaction_id = "e4bfe618", currency_id = IDS.eur, asset_amount = { value = "167.45", currency_id = IDS.eur }, flow = "OUTGOING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "7d5cf1c0", rate = "28962.22500000" } },
+      { transaction_id = "34669f1d", asset_id = "b86c81e5", asset_amount = { value = "2.61591659", asset_id = "b86c81e5" }, flow = "INCOMING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "1", asset_id = "b86c81e5" }, index_asset_id = "bci5-uuid", trade = { trade_id = "eda60f33", rate = "17.58083576" } },
+      { transaction_id = "4b74e712", asset_id = "b86c1b2a", asset_amount = { value = "0.12234534", asset_id = "b86c1b2a" }, flow = "INCOMING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "1", asset_id = "b86c1b2a" }, index_asset_id = "bci5-uuid", trade = { trade_id = "c20d0555", rate = "409.74180000" } },
+      { transaction_id = "cba4e48f", asset_id = "b86c0bbf", asset_amount = { value = "0.43396352", asset_id = "b86c0bbf" }, flow = "INCOMING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "1", asset_id = "b86c0bbf" }, index_asset_id = "bci5-uuid", trade = { trade_id = "4057474c", rate = "122.19921103" } },
+      { transaction_id = "17d3b4ad", asset_id = "b86c113a", asset_amount = { value = "0.22425665", asset_id = "b86c113a" }, flow = "INCOMING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "1", asset_id = "b86c113a" }, index_asset_id = "bci5-uuid", trade = { trade_id = "b20eb71a", rate = "1102.93270425" } },
+      { transaction_id = "84cf657e", asset_id = "b86c034b", asset_amount = { value = "0.00578166", asset_id = "b86c034b" }, flow = "INCOMING", credited_at = "2021-01-20T22:04:51Z", asset_balance_after = { value = "1", asset_id = "b86c034b" }, index_asset_id = "bci5-uuid", trade = { trade_id = "7d5cf1c0", rate = "28962.22500000" } }
+    } },
+    { operation_id = "89792c58-op", operation_type = "index_sell", transactions = {
+      { transaction_id = "89792c58", asset_id = "b86c1b2a", asset_amount = { value = "0.01491773", asset_id = "b86c1b2a" }, flow = "OUTGOING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "1", asset_id = "b86c1b2a" }, index_asset_id = "bci5-uuid", trade = { trade_id = "b7f67134", rate = "351.25965000" } },
+      { transaction_id = "75976946", asset_id = "b86c0bbf", asset_amount = { value = "0.05300388", asset_id = "b86c0bbf" }, flow = "OUTGOING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "1", asset_id = "b86c0bbf" }, index_asset_id = "bci5-uuid", trade = { trade_id = "f68f187f", rate = "113.95391800" } },
+      { transaction_id = "8cbb6b1f", asset_id = "b86c81e5", asset_amount = { value = "0.31878502", asset_id = "b86c81e5" }, flow = "OUTGOING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "1", asset_id = "b86c81e5" }, index_asset_id = "bci5-uuid", trade = { trade_id = "47c72abf", rate = "19.91938007" } },
+      { transaction_id = "a9ec0006", asset_id = "b86c034b", asset_amount = { value = "0.00070562", asset_id = "b86c034b" }, flow = "OUTGOING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "1", asset_id = "b86c034b" }, index_asset_id = "bci5-uuid", trade = { trade_id = "ff02489c", rate = "26231.95575000" } },
+      { transaction_id = "a0c26a21", asset_id = "b86c113a", asset_amount = { value = "0.02739092", asset_id = "b86c113a" }, flow = "OUTGOING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "1", asset_id = "b86c113a" }, index_asset_id = "bci5-uuid", trade = { trade_id = "60ee8a4c", rate = "1014.93460140" } },
+      { transaction_id = "3754dbd6", currency_id = IDS.eur, asset_amount = { value = "5.24", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "b7f67134", rate = "351.25965000" } },
+      { transaction_id = "251aefaa", currency_id = IDS.eur, asset_amount = { value = "6.04", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "f68f187f", rate = "113.95391800" } },
+      { transaction_id = "fe1f6a8c", currency_id = IDS.eur, asset_amount = { value = "6.35", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "47c72abf", rate = "19.91938007" } },
+      { transaction_id = "300786db", currency_id = IDS.eur, asset_amount = { value = "18.51", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "ff02489c", rate = "26231.95575000" } },
+      { transaction_id = "4bdd489c", currency_id = IDS.eur, asset_amount = { value = "27.8", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-23T13:36:31Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", trade = { trade_id = "60ee8a4c", rate = "1014.93460140" } }
+    } },
+    { operation_id = "9e384a48-op", operation_type = "index_rebalancing", transactions = {
+      { transaction_id = "9e384a48", asset_id = "b86c1b2a", asset_amount = { value = "0.10742761", asset_id = "b86c1b2a" }, flow = "OUTGOING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "1", asset_id = "b86c1b2a" }, index_asset_id = "bci5-uuid", transaction_type = "sell", trade = { trade_id = "5a2ff8d4", rate = "325.48425000" } },
+      { transaction_id = "3a148ce7", asset_id = "b86c0bbf", asset_amount = { value = "0.04288901", asset_id = "b86c0bbf" }, flow = "OUTGOING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "1", asset_id = "b86c0bbf" }, index_asset_id = "bci5-uuid", transaction_type = "sell", trade = { trade_id = "10531b0b", rate = "104.69221786" } },
+      { transaction_id = "01bd95cb", asset_id = "b86c113a", asset_amount = { value = "0.04734887", asset_id = "b86c113a" }, flow = "OUTGOING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "1", asset_id = "b86c113a" }, index_asset_id = "bci5-uuid", transaction_type = "sell", trade = { trade_id = "46b30820", rate = "1070.22056468" } },
+      { transaction_id = "6b353250", asset_id = "b86c81e5", asset_amount = { value = "0.24152084", asset_id = "b86c81e5" }, flow = "OUTGOING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "1", asset_id = "b86c81e5" }, index_asset_id = "bci5-uuid", transaction_type = "sell", trade = { trade_id = "92bb8b50", rate = "18.39796946" } },
+      { transaction_id = "fa2ef8c2", currency_id = IDS.eur, asset_amount = { value = "34.28", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", transaction_type = "sell", trade = { trade_id = "5a2ff8d4", rate = "325.48425000" } },
+      { transaction_id = "fb24f380", currency_id = IDS.eur, asset_amount = { value = "4.4", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", transaction_type = "sell", trade = { trade_id = "10531b0b", rate = "104.69221786" } },
+      { transaction_id = "b39cd7fd", currency_id = IDS.eur, asset_amount = { value = "49.68", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", transaction_type = "sell", trade = { trade_id = "46b30820", rate = "1070.22056468" } },
+      { transaction_id = "4f0588ea", currency_id = IDS.eur, asset_amount = { value = "4.35", currency_id = IDS.eur }, flow = "INCOMING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", transaction_type = "sell", trade = { trade_id = "92bb8b50", rate = "18.39796946" } },
+      { transaction_id = "0a75043e", currency_id = IDS.eur, asset_amount = { value = "61.93", currency_id = IDS.eur }, flow = "OUTGOING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", transaction_type = "buy", trade = { trade_id = "b88e13bb", rate = "13.19463109" } },
+      { transaction_id = "ef5c781d", currency_id = IDS.eur, asset_amount = { value = "30.78", currency_id = IDS.eur }, flow = "OUTGOING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "100", currency_id = IDS.eur }, index_asset_id = "bci5-uuid", transaction_type = "buy", trade = { trade_id = "07fa4863", rate = "26860.98500000" } },
+      { transaction_id = "4c775802", asset_id = "b86ccc0b", asset_amount = { value = "4.60024927", asset_id = "b86ccc0b" }, flow = "INCOMING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "1", asset_id = "b86ccc0b" }, index_asset_id = "bci5-uuid", transaction_type = "buy", trade = { trade_id = "b88e13bb", rate = "13.19463109" } },
+      { transaction_id = "81551cb4", asset_id = "b86c034b", asset_amount = { value = "0.00112309", asset_id = "b86c034b" }, flow = "INCOMING", credited_at = "2021-01-31T17:55:40Z", asset_balance_after = { value = "1", asset_id = "b86c034b" }, index_asset_id = "bci5-uuid", transaction_type = "buy", trade = { trade_id = "07fa4863", rate = "26860.98500000" } }
+    } }
+  }
+end
+
 local function fakeApi(url)
   table.insert(REQUESTS, url)
   local path, query = url:match("^https://api%.public%.bitpanda%.com/v1/([^?]*)%??(.*)$")
@@ -60,6 +103,9 @@ local function fakeApi(url)
     }
     if SCENARIO.withUsd then table.insert(d, { currency_id = IDS.usd, balance = { value = "10", currency_id = IDS.usd } }) end
     if SCENARIO.unvalued then table.insert(d, { asset_id = "gold-uuid", balance = { value = "1.5" } }) end
+    if SCENARIO.withBci5 then table.insert(d, { asset_id = "bci5-uuid", balance = { value = "0.026354981" },
+      invested_amount = { value = "609.66", currency_id = IDS.eur }, average_buy_price = { value = "23133.20683802", currency_id = IDS.eur },
+      currency_balance = { value = "774.71", currency_id = IDS.eur } }) end
     if SCENARIO.withIndex then table.insert(d, { asset_id = IDS.bci, balance = { value = "0.026354981" },
       invested_amount = { value = "609.66", currency_id = IDS.eur }, average_buy_price = { value = "23133.20683802", currency_id = IDS.eur },
       currency_balance = { value = "774.71", currency_id = IDS.eur }, total_return = { value = "165.05", currency_id = IDS.eur } }) end
@@ -77,6 +123,10 @@ local function fakeApi(url)
       if id == IDS.aapl then table.insert(out, { id = id, name = "Apple", symbol = "AAPL", isin = "US0378331005", type = "equity_security", group = "equity_stock" }) end
       if id == IDS.bci then table.insert(out, { id = id, name = "Bitpanda Crypto Index 10", symbol = "BCI10", type = "index", group = "index" }) end
       if id == "gold-uuid" then table.insert(out, { id = id, name = "Gold", symbol = "XAU", type = "commodity", group = "metal" }) end
+      if id == "bci5-uuid" then table.insert(out, { id = id, name = "Bitpanda Crypto Index 5", symbol = "BCI5", type = "index", group = "index" }) end
+      for _, c in ipairs({ {"b86c81e5","DOGE"}, {"b86c1b2a","LINK"}, {"b86c0bbf","LTC"}, {"b86c113a","ETH"}, {"b86c034b","BTC"}, {"b86ccc0b","XRP"} }) do
+        if id == c[1] then table.insert(out, { id = id, name = c[2] .. " (Bestandteil)", symbol = c[2], type = "cryptocoin", group = "coin" }) end
+      end
     end
     resp = { data = out, has_next_page = false }
   elseif path:match("^tickers/") then
@@ -137,6 +187,7 @@ local function fakeApi(url)
         return again
       end
       local page2 = { op("op5", "deposit", { fiat("deposit", "INCOMING", "999.00", "2026-07-01T12:00:00.000Z") }) }
+      if SCENARIO.withBci5 then for _, o in ipairs(indexOps()) do table.insert(page2, o) end end
       if SCENARIO.duplicateIds then
         -- legacy-style data: distinct operations sharing operation_id values of page 1
         table.insert(page2, op("op1", "deposit", { fiat("deposit", "INCOMING", "11.00", "2026-04-01T00:00:00.000Z", { transaction_id = "tx-dup-a" }) }))
@@ -147,6 +198,19 @@ local function fakeApi(url)
     end
   else
     resp = { errors = { { status = 404, code = "not_found" } } }
+  end
+  if path == "operations" and SCENARIO.honourFrom then
+    local from = query:match("from=([^&]*)")
+    if from then
+      from = from:gsub("%%3A", ":"):gsub("%%3a", ":")
+      local kept = {}
+      for _, o in ipairs(resp.data) do
+        local newest = ""
+        for _, t in ipairs(o.transactions) do if (t.credited_at or "") > newest then newest = t.credited_at end end
+        if newest >= from then table.insert(kept, o) end
+      end
+      resp.data = kept
+    end
   end
   if SCENARIO.camelCase then resp = camel(resp) end
   return resp
@@ -541,4 +605,52 @@ run("T35 first refresh fails (API error): marker must NOT be set", { assetsFail 
   local r = RefreshAccount(findAccount(ListAccounts({}), "fiat"), 1735689600)
   Connection = orig
   return "refresh -> " .. tostring(r):sub(1, 60) .. " | marker=" .. tostring(LocalStorage.fullHistoryDone_EUR)
+end)
+
+Connection = function() return { request = function(self, m, url, b, c, headers) return fakeApi(url) end } end
+dofile(EXT)
+run("T36 BCI5 with Stefan's real index operations: nominal = net paid (buy 563.94 - sell 63.94 = 500.00)", { withBci5 = true }, function()
+  LocalStorage = {}
+  session()
+  local accts = ListAccounts({})
+  local r = RefreshAccount(findAccount(accts, "index"), 0)
+  if type(r) ~= "table" then return "-> " .. tostring(r) end
+  local out = {}
+  for _, sec in ipairs(r.securities) do
+    out[#out + 1] = string.format("%s: nominal=%.2f %s amount=%.2f price=%.2f%% purchasePrice=%s", sec.name, sec.quantity, tostring(sec.currencyOfQuantity), sec.amount, sec.price, tostring(sec.purchasePrice))
+  end
+  local n = 0
+  for _, u in ipairs(REQUESTS) do if u:find("operations") then n = n + 1 end end
+  return table.concat(out, " | ") .. string.format(" | operations requests=%d | LocalStorage: indexNet=%s until=%s cur=%s",
+    n, tostring(LocalStorage["indexNet_bci5-uuid"]), tostring(LocalStorage.indexNetUntil), tostring(LocalStorage.indexNetCurrency))
+end)
+
+run("T37 next session: only operations after the stored timestamp are requested, net unchanged", { withBci5 = true, honourFrom = true }, function()
+  -- LocalStorage carries over from T36; the script itself starts afresh like in MoneyMoney
+  dofile(EXT)
+  session()
+  local r = RefreshAccount(findAccount(ListAccounts({}), "index"), 0)
+  if type(r) ~= "table" then return "-> " .. tostring(r) end
+  local q = {}
+  for _, u in ipairs(REQUESTS) do if u:find("operations") then q[#q + 1] = (u:gsub(".*operations%??", "")) end end
+  return string.format("nominal=%.2f price=%.2f%% | operations queries: %s | indexNet=%s", r.securities[1].quantity, r.securities[1].price, table.concat(q, " ; "), tostring(LocalStorage["indexNet_bci5-uuid"]))
+end)
+
+run("T38 fiat account: index legs booked with index names, constituent in purpose, rebalancing nets to zero", { withBci5 = true }, function()
+  LocalStorage = {}
+  session()
+  local r = RefreshAccount(findAccount(ListAccounts({}), "fiat"), 0)
+  if type(r) ~= "table" then return "-> " .. tostring(r) end
+  local byName, sums, sample = {}, {}, nil
+  for _, t in ipairs(r.transactions) do
+    if t.name:find("Index") then
+      byName[t.name] = (byName[t.name] or 0) + 1
+      sums[t.name] = (sums[t.name] or 0) + t.amount
+      if t.name:find("Index%-Kauf") and sample == nil then sample = t.purpose:gsub("\n", " / ") .. " [" .. t.bookingText .. "]" end
+    end
+  end
+  local parts = {}
+  for k, v in pairs(byName) do parts[#parts + 1] = string.format("%s x%d sum=%.2f", k, v, sums[k]) end
+  table.sort(parts)
+  return table.concat(parts, " | ") .. "\n   sample: " .. tostring(sample)
 end)
